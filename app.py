@@ -7,6 +7,7 @@ import plotly.graph_objects as go
 # import bcrypt
 from datetime import datetime
 from scipy import stats
+from huggingface_hub import hf_hub_download
 
 
 # Page configuration
@@ -151,9 +152,17 @@ st.set_page_config(
 
 @st.cache_data
 def load_demo_data():
-    """Load pre-processed demo data"""
-    df = pd.read_parquet('demo_data/streams_all.parquet')
-    df_valid = pd.read_parquet('demo_data/streams_valid.parquet')
+    """Load pre-processed demo data from Hugging Face Hub"""
+    df_path = hf_hub_download(repo_id="teolepv/demo-listening-data",
+                              repo_type="dataset", 
+                              filename="streams_all.parquet")
+    df_valid_path = hf_hub_download(repo_id="teolepv/demo-listening-data",
+                                     repo_type="dataset",
+                                     filename="streams_valid.parquet")
+
+    df = pd.read_parquet(df_path)
+    df_valid = pd.read_parquet(df_valid_path)
+
     return df, df_valid
 
 
