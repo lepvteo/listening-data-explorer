@@ -1,3 +1,13 @@
+---
+title: Spotify Listening Data Explorer
+emoji: 🎧
+colorFrom: indigo
+colorTo: purple
+sdk: streamlit
+app_file: app.py
+python_version: '3.10'
+---
+
 # Spotify Listening Data Explorer
 
 An interactive Streamlit application for analyzing personal Spotify listening history with statistical insights and nice visualizations.
