@@ -8,6 +8,7 @@ python_version: '3.10'
 # Spotify Listening Data Explorer
 
 An interactive Streamlit application for analyzing personal Spotify listening history with statistical insights and nice visualizations.
+
 Run the demo on [HuggingFace Space](https://huggingface.co/spaces/teolepv/listening-audio-explorer)
 
 
