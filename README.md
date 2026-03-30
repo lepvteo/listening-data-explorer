@@ -1,14 +1,14 @@
 ---
-title: Streamlit Template Space
+title: Listening Data Explorer
 emoji: 🚀
 colorFrom: red
 colorTo: red
 sdk: docker
 app_port: 8501
 tags:
-  - streamlit
+- streamlit
 pinned: false
-short_description: Streamlit template space
+short_description: An interactive dashboard for exploring your listening data.
 ---
 
 # Welcome to Streamlit!
