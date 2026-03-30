@@ -18,7 +18,6 @@ venv/
 
 # Other files
 TODO.md
-token_key.txt
 
 # IDE
 .vscode/
