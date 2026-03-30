@@ -1,0 +1,6 @@
+streamlit==1.55.0
+pandas==2.3.3
+plotly==6.6.0
+scipy==1.11.4
+pyarrow==23.0.1
+huggingface_hub==1.6.0

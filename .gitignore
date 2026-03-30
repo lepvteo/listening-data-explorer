@@ -1,0 +1,34 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.env/
+.venv/
+
+# Streamlit
+.streamlit/
+
+# Data files (if sensitive)
+*.parquet
+*.json
+
+# Other files
+TODO.md
+token_key.txt
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
