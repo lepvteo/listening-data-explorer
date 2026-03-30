@@ -153,12 +153,12 @@ st.set_page_config(
 @st.cache_data
 def load_demo_data():
     """Load pre-processed demo data from Hugging Face Hub"""
-    df_path = hf_hub_download(repo_id="teolepv/demo-listening-data",
+    df_path = hf_hub_download(repo_id="lepvteo/demo-listening-data",
                               repo_type="dataset", 
                               filename="streams_all.parquet")
-    df_valid_path = hf_hub_download(repo_id="teolepv/demo-listening-data",
-                                     repo_type="dataset",
-                                     filename="streams_valid.parquet")
+    df_valid_path = hf_hub_download(repo_id="lepvteo/demo-listening-data",
+                                    repo_type="dataset",
+                                    filename="streams_valid.parquet")
 
     df = pd.read_parquet(df_path)
     df_valid = pd.read_parquet(df_valid_path)
@@ -1342,7 +1342,7 @@ def show_main_app(username):
             st.markdown("""
             <div style="text-align: right;">
                 By <b>Téo Le Provost</b> |
-                <a href="https://www.linkedin.com/in/t%C3%A9o-le-provost-689a611b3/en" target="_blank">LinkedIn</a> |
+                <a href="https://www.linkedin.com/in/teoleprovost717/en" target="_blank">LinkedIn</a> |
                 <a href="https://github.com/lepvteo" target="_blank">GitHub</a>
             </div>
             """, unsafe_allow_html=True)        

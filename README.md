@@ -37,7 +37,7 @@ An interactive Streamlit application for analyzing personal Spotify listening hi
 ## How to use
 
 ### Option 1: Try Online (Recommended)
-Visit the [HuggingFace Space](https://huggingface.co/spaces/teolepv/listening-audio-explorer)
+Visit the [HuggingFace Space](https://huggingface.co/spaces/lepvteo/listening-audio-explorer)
 
 ### Option 2: Run Locally
 
@@ -46,7 +46,7 @@ Visit the [HuggingFace Space](https://huggingface.co/spaces/teolepv/listening-au
 ### Installation
 1. **Clone the repository**
 ```bash
-git clone https://github.com/YOUR-USERNAME/spotify-listening-explorer.git
+git clone https://github.com/lepvteo/spotify-listening-explorer.git
 cd spotify-listening-explorer
 ```
 
@@ -116,7 +116,7 @@ Originally developed as a final project for Introduction to Python and SQL cours
 Feel free to reach out for questions or collaboration!
 
 - [GitHub](https://github.com/lepvteo)
-- [LinkedIn](https://www.linkedin.com/in/téo-le-provost-689a611b3/en)
+- [LinkedIn](https://www.linkedin.com/in/teoleprovost717/en)
 
 
 ## License
