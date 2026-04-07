@@ -3,152 +3,203 @@ import pandas as pd
 import plotly.express as px
 from plotly.subplots import make_subplots
 import plotly.graph_objects as go
-# import sqlite3
-# import bcrypt
+import sqlite3
+import bcrypt
 from datetime import datetime
 from scipy import stats
 from huggingface_hub import hf_hub_download
 
 
-# Page configuration
+# --- Page configuration ---
+
 st.set_page_config(
     page_title="Listening Data Explorer",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# DB_PATH = "spotify_analysis.db"
+DB_PATH = "users.db"
 
 
 
-### SQL / AUTH LAYER 
+# --- SQL / AUTH LAYER ---
 
-# def get_connection():
-#     """Establish and return a connection to the SQLite database"""
-#     return sqlite3.connect(DB_PATH, check_same_thread=False)
+def get_connection():
+    """Establish and return a connection to the SQLite database"""
+    return sqlite3.connect(DB_PATH, check_same_thread=False)
 
-# def init_db():
-#     """Initialize database tables for users and user actions if they don't exist"""
-#     conn = get_connection()
-#     cur = conn.cursor()
-    
-#     # Users table
-#     cur.execute("""
-#         CREATE TABLE IF NOT EXISTS users (
-#             id INTEGER PRIMARY KEY AUTOINCREMENT,
-#             username TEXT UNIQUE NOT NULL,
-#             password TEXT NOT NULL
-#         )
-#     """)
-    
-#     # User actions table with details column
-#     cur.execute("""
-#         CREATE TABLE IF NOT EXISTS user_actions (
-#             id INTEGER PRIMARY KEY AUTOINCREMENT,
-#             username TEXT NOT NULL,
-#             action TEXT NOT NULL,
-#             details TEXT,
-#             ts TEXT NOT NULL
-#         )
-#     """)
-    
-#     # Ensure details column exists
-#     cur.execute("PRAGMA table_info(user_actions)")
-#     columns = [row[1] for row in cur.fetchall()]
-#     if "details" not in columns:
-#         cur.execute("ALTER TABLE user_actions ADD COLUMN details TEXT")
-    
-#     conn.commit()
-#     conn.close()
+def init_db():
+    """Initialize database tables for users and upload logs if they don't exist"""
+    conn = get_connection()
+    cur = conn.cursor()
 
-# def create_user(username, password):
-#     """
-#     Create a new user account with bcrypt-hashed password. 
-#     Returns True if successful, False if username already exists.
-#     """
+    # Users table
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL
+        )
+    """)
 
-#     conn = get_connection()
-#     cur = conn.cursor()
-#     try:
-#         hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
-#         cur.execute("INSERT INTO users (username, password) VALUES (?, ?)", 
-#                     (username, hashed_password))
-#         conn.commit()
-#         return True
-#     except sqlite3.IntegrityError:
-#         return False
-#     finally:
-#         conn.close()
+    # Upload logs table for tracking user uploads (no sensitive data stored, just metadata)
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS upload_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            upload_date TEXT NOT NULL,
+            stream_count INTEGER NOT NULL,
+            most_active_month TEXT,
+            FOREIGN KEY(user_id) REFERENCES users(id)
+        )
+    """)
 
-# def verify_user(username, password):
-#     """    Verify user login credentials against stored bcrypt hash
-#     Returns True if credentials are valid, False otherwise.
-#     """
+    conn.commit()
+    conn.close()
 
-#     conn = get_connection()
-#     cur = conn.cursor()
-#     cur.execute("SELECT password FROM users WHERE username = ?", (username,))
-#     row = cur.fetchone()
-#     conn.close()
-    
-#     if row is None:
-#         return False
-    
-#     return bcrypt.checkpw(password.encode('utf-8'), row[0])
+def create_user(username, password):
+    """
+    Create a new user account with bcrypt-hashed password.
+    Returns True if successful, False if username already exists.
+    """
+    conn = get_connection()
+    cur = conn.cursor()
+    try:
+        hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+        cur.execute("INSERT INTO users (username, password) VALUES (?, ?)",
+                    (username, hashed_password))
+        conn.commit()
+        return True
+    except sqlite3.IntegrityError:
+        return False
+    finally:
+        conn.close()
 
-# def log_action(username, action, details=None):
-#     """Log user actions to the database for tracking purposes"""
-#     conn = get_connection()
-#     cur = conn.cursor()
-#     ts = datetime.utcnow().isoformat()
-#     cur.execute(
-#         "INSERT INTO user_actions (username, action, details, ts) VALUES (?, ?, ?, ?)",
-#         (username, action, details, ts)
-#     )
-#     conn.commit()
-#     conn.close()
+def verify_user(username, password):
+    """
+    Verify user login credentials against stored bcrypt hash.
+    Returns user_id if credentials are valid, None otherwise.
+    """
+    conn = get_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT id, password FROM users WHERE username = ?", (username,))
+    row = cur.fetchone()
+    conn.close()
 
+    if row is None:
+        return None
 
+    user_id, stored_hash = row
+    if bcrypt.checkpw(password.encode('utf-8'), stored_hash):
+        return user_id
+    return None
 
-### LOGIN / REGISTER UI
+def log_upload(user_id, stream_count, most_active_month):
+    """Log an upload for a user with stream count and most active month"""
+    conn = get_connection()
+    cur = conn.cursor()
+    upload_date = datetime.now().isoformat()
+    cur.execute(
+        "INSERT INTO upload_logs (user_id, upload_date, stream_count, most_active_month) VALUES (?, ?, ?, ?)",
+        (user_id, upload_date, stream_count, most_active_month)
+    )
+    conn.commit()
+    conn.close()
 
-# def show_login_page():
-#     """Display login and registration interface"""
-#     st.title("🔐 Login to Spotify Wrapped Analysis")
-    
-#     tab_login, tab_register = st.tabs(["Sign in", "Register"])
-    
-#     with tab_login:
-#         st.subheader("Sign in")
-#         login_user = st.text_input("Username", key="login_user")
-#         login_pass = st.text_input("Password", type="password", key="login_pass")
-#         if st.button("Login"):
-#             if verify_user(login_user, login_pass):
-#                 st.session_state["logged_in"] = True
-#                 st.session_state["username"] = login_user
-#                 log_action(login_user, "login_success")
-#                 st.success(f"Welcome, {login_user}!")
-#                 st.rerun()
-#             else:
-#                 st.error("Invalid username or password")
-    
-#     with tab_register:
-#         st.subheader("Create new account")
-#         new_user = st.text_input("New username", key="new_user")
-#         new_pass = st.text_input("New password", type="password", key="new_pass")
-#         if st.button("Register"):
-#             if not new_user or not new_pass:
-#                 st.error("Username and password cannot be empty")
-#             else:
-#                 ok = create_user(new_user, new_pass)
-#                 if ok:
-#                     st.success("Account created! You can now log in.")
-#                 else:
-#                     st.error("Username already exists")
+def get_user_upload_stats(user_id):
+    """Get upload statistics for a user: total uploads, last upload info"""
+    conn = get_connection()
+    cur = conn.cursor()
+
+    # Total uploads
+    cur.execute("SELECT COUNT(*) FROM upload_logs WHERE user_id = ?", (user_id,))
+    total_uploads = cur.fetchone()[0]
+
+    # Last upload info
+    cur.execute("""
+        SELECT upload_date, stream_count, most_active_month
+        FROM upload_logs
+        WHERE user_id = ?
+        ORDER BY upload_date DESC
+        LIMIT 1
+    """, (user_id,))
+    last_upload = cur.fetchone()
+
+    conn.close()
+
+    return total_uploads, last_upload
 
 
 
-### DATA PROCESSING FUNCTIONS
+# --- LOGIN / REGISTER UI ---
+
+def show_user_sidebar():
+    """Display user authentication UI and activity in sidebar"""
+    with st.sidebar:
+        with st.expander("👤 Account (Optional)"):
+
+            if st.session_state.get("logged_in", False):
+                username = st.session_state.get("username")
+                user_id = st.session_state.get("user_id")
+
+                st.success(f"Logged in as **{username}**")
+
+                total_uploads, last_upload = get_user_upload_stats(user_id)
+
+                st.markdown("#### Your Activity")
+                st.markdown(f"- **{total_uploads}** upload(s)")
+
+                if last_upload:
+                    upload_date, stream_count, most_active_month = last_upload
+                    upload_date_str = datetime.fromisoformat(upload_date).strftime("%b %d, %Y")
+                    st.markdown(f"- **Last analysis:** {upload_date_str}")
+                    st.markdown(f"- **{stream_count:,}** streams analyzed")
+                    if most_active_month:
+                        st.markdown(f"- **Most active month:** {most_active_month}")
+
+                if st.button("Logout", key="logout_btn"):
+                    st.session_state["logged_in"] = False
+                    st.session_state["username"] = None
+                    st.session_state["user_id"] = None
+                    st.rerun()
+
+            else:
+                auth_tab1, auth_tab2 = st.tabs(["Sign In", "Register"])
+
+                with auth_tab1:
+                    st.markdown("**Sign in to save your upload history**")
+                    login_user = st.text_input("Username", key="login_user")
+                    login_pass = st.text_input("Password", type="password", key="login_pass")
+                    if st.button("Login", key="login_btn"):
+                        user_id = verify_user(login_user, login_pass)
+                        if user_id:
+                            st.session_state["logged_in"] = True
+                            st.session_state["username"] = login_user
+                            st.session_state["user_id"] = user_id
+                            st.success(f"Welcome, {login_user}!")
+                            st.rerun()
+                        else:
+                            st.error("Invalid username or password")
+
+                with auth_tab2:
+                    st.markdown("**Create a new account**")
+                    new_user = st.text_input("Username", key="new_user")
+                    new_pass = st.text_input("Password", type="password", key="new_pass")
+                    if st.button("Register", key="register_btn"):
+                        if not new_user or not new_pass:
+                            st.error("Username and password cannot be empty")
+                        elif len(new_pass) < 6:
+                            st.error("Password must be at least 6 characters")
+                        else:
+                            ok = create_user(new_user, new_pass)
+                            if ok:
+                                st.success("Account created! You can now sign in.")
+                            else:
+                                st.error("Username already exists")
+
+
+
+# --- DATA PROCESSING FUNCTIONS ---
 
 @st.cache_data
 def load_demo_data():
@@ -255,7 +306,8 @@ def load_and_process_user_data(uploaded_files):
     return df, df_valid
 
 
-### VISUALIZATION FUNCTIONS ###
+
+# --- VISUALIZATION FUNCTIONS ---
 
 def show_overview(df, df_valid):
     """Display basic stats overview"""
@@ -622,7 +674,7 @@ def show_valid_streams_filtering(df, df_valid):
     
     st.markdown("---")
 
-    ### General Statistics and Distribution of Play Durations
+    # General Statistics and Distribution of Play Durations
     # Display summary statistics
     st.subheader("Play Duration Statistics")
     col1, col2 = st.columns(2)
@@ -1313,7 +1365,7 @@ def show_hypothesis_platform(df_to_use, use_filtered_data):
 
 
 
-### MAIN APP ###
+# --- MAIN APP ---
 
 def show_main_app(username):
     """
@@ -1329,9 +1381,13 @@ def show_main_app(username):
         key="current_page"
     )
 
+    # Show user authentication sidebar
+    st.sidebar.markdown("---")
+    show_user_sidebar()
+
     page = st.session_state["current_page"]
 
-    # ── APP OVERVIEW ────────────────────────────────────────────────────────────
+    # APP OVERVIEW
     if page == "App Overview":
         st.markdown("<h1 style='color: #1DB954;'>Listening Data Explorer</h1>", unsafe_allow_html=True)
         
@@ -1359,7 +1415,7 @@ def show_main_app(username):
             horizontal=True,
         )
                 
-        # ── DEMO MODE ───────────────────────────────────────────────────────────
+        # DEMO MODE
         if mode == "Try demo mode":
             # st.info("🎭 **Demo Mode** — You will be viewing the author's listening data from 2025.")
             st.markdown("---")
@@ -1367,7 +1423,7 @@ def show_main_app(username):
             st.markdown("You will be viewing the author's listening data from 2025. This allows you to explore the app's features without uploading your own data.")
 
             # Load demo data button
-            if st.button("📊 Load Demo Data", type="primary"):
+            if st.button("Load Demo Data", type="primary"):
                 try:
                     with st.spinner("Loading demo data..."):
                         df, df_valid = load_demo_data()
@@ -1387,7 +1443,7 @@ def show_main_app(username):
                 show_overview(df, df_valid)
 
 
-        # ── UPLOAD MODE ─────────────────────────────────────────────────────────
+        # UPLOAD MODE
         elif mode == "Or upload your own data":
             st.markdown("---")
             st.subheader("📁 Upload Your Own Spotify Data")
@@ -1408,6 +1464,13 @@ def show_main_app(username):
                         st.session_state["df"] = df
                         st.session_state["df_valid"] = df_valid
                         st.session_state["demo_mode"] = False
+
+                        # Log upload if user is logged in
+                        if st.session_state.get("logged_in", False):
+                            stream_count = len(df_valid)
+                            most_active_month = df_valid.groupby('month').size().idxmax() if len(df_valid) > 0 else None
+                            log_upload(st.session_state.get("user_id"), stream_count, most_active_month)
+
                 except Exception as e:
                     st.error(f"Error processing data: {str(e)}")
                     st.info("Please make sure you've uploaded valid Spotify Extended Streaming History JSON files.")
@@ -1449,7 +1512,7 @@ def show_main_app(username):
         """)
 
 
-    # ── ALL OTHER PAGES ─────────────────────────────────────────────────────────
+    # ALL OTHER PAGES
     else:
         # Guard: data must be loaded first
         if "df" not in st.session_state:
@@ -1509,34 +1572,11 @@ def show_main_app(username):
 
 
 
-### MAIN
+# --- MAIN ---
 
 def main():
-    """Run the Streamlit application without authentication"""
-
-    # init_db()
-    
-    # # Sidebar user menu
-    # with st.sidebar:
-    #     st.header("👤 User")Justé, c'est la plupart de ces différentes choses. Merci pour l'identification.
-
-    #     if st.session_state.get("logged_in", False):
-    #         st.write(f"🟢 {st.session_state['username']}")
-    #         if st.button("Logout"):
-    #             log_action(st.session_state["username"], "logout")
-    #             st.session_state["logged_in"] = False
-    #             st.session_state["username"] = None
-    #             st.rerun()
-    #     else:
-    #         st.write("Not logged in")
-    
-    # # Show login or main app
-    # if not st.session_state.get("logged_in", False):
-    #     show_login_page()
-    # else:
-    #     show_main_app(st.session_state["username"])
-    
-    # Direct access without login
+    """Run the Streamlit application with optional authentication"""
+    init_db()
     show_main_app(username=None)
 
 if __name__ == "__main__":

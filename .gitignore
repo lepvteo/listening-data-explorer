@@ -18,6 +18,7 @@ venv/
 
 # Other files
 TODO.md
+users.db
 
 # IDE
 .vscode/
